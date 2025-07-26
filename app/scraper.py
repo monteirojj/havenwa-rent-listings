@@ -10,23 +10,26 @@ def scrape_gumtree():
     try:
         response = requests.get(url, headers=headers, timeout=10)
         soup = BeautifulSoup(response.text, "html.parser")
-        
+
         listings = []
+        cards = soup.select("a.listing-link")  # Fallback selector for listing links
 
-        for card in soup.select("article[data-testid='listing-card']")[:10]:
-            title_tag = card.select_one("h3[data-testid='listing-title']")
-            price_tag = card.select_one("span[data-testid='listing-price']")
-            link_tag = card.find("a", href=True)
-
+        for card in cards[:10]:  # Limit to 10 for speed
+            title_tag = card.select_one("span.title")
+            price_tag = card.select_one("span.price")
             title = title_tag.get_text(strip=True) if title_tag else "N/A"
             price = price_tag.get_text(strip=True) if price_tag else "N/A"
-            link = f"https://www.gumtree.com.au{link_tag['href']}" if link_tag else "#"
+            link = f"https://www.gumtree.com.au{card['href']}" if card.has_attr("href") else "#"
 
             listings.append({
                 "title": title,
                 "price": price,
                 "link": link
             })
+
+        # If nothing was scraped, return diagnostic info
+        if not listings:
+            return [{"error": "No listings found. Gumtree may have blocked the server or changed layout."}]
 
         return listings
 
